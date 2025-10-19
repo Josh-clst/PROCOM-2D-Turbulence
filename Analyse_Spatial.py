@@ -12,14 +12,19 @@ import sys
 
 from Increments import Incrs_anisotropic_generator2d
 
+from scipy.stats import kurtosis, skew
+
 #import h5py as h5 # for saving the results
 import netCDF4
 
 import matplotlib.pyplot as plt
 
+import infomeasure as im # to compute information measures
+
 #%%
-dir = 'D:/IMT/3A/PRO_COM/transfer_10818383_files_96d3ed0a/'
-path= dir + 'vars_k32_v2.nc'
+dir = 'D:/IMT/3A/PRO_COM/PROCOM-2D-Turbulence/simulations/input/'
+sim_n = '01'
+path= dir + 'sim_' + sim_n + '/' + 'vars_k32_v2.nc'
 
 file2read = netCDF4.Dataset(path,'r')
 #print(file2read.variables.keys())
@@ -44,18 +49,34 @@ WW=(WW)/sigma
 
 N=len(WW)
 
-# Definition of scales
-scales=np.arange(-10,11,1)
-
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
 Nreal=2 # number of realizations for the statistics
-scaleth=10 # Theiler to avoid correlation between increments
+scaleth=100 # maximum scale to analyse
+
+# Definition of scales
+scales=np.arange(-scaleth,scaleth+1,1)
 
 # Initialization of matrix
 S2=np.zeros((Nreal, len(scales),len(scales)))
-       
-# Estimation of S2 for each combination of scales (scalex,scaley)
+
+# Initialization of information measures
+
+# Skewness, flatness
+skewness = np.zeros((Nreal, len(scales), len(scales)))
+flatness = np.zeros((Nreal, len(scales), len(scales)))
+
+# Shanon entropy
+entropy = np.zeros((Nreal, len(scales), len(scales)))
+
+# Distance to Gaussian distribution (Kullback-Leiber divergence)
+dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
+
+# Radius and angle of the increments
+radius = np.zeros((Nreal, len(scales), len(scales)))
+angle = np.zeros((Nreal, len(scales), len(scales)))
+
+# Estimation of all information measures
 for isx in range(len(scales)): #x dimension
     for isy in range(len(scales)): # y dimension
         print(isx,"/",len(scales), '----' , isy,"/",len(scales))
@@ -73,8 +94,19 @@ for isx in range(len(scales)): #x dimension
             incrs = np.random.permutation(incrs)[0:int(len(incrs)/Nanalyse)*Nanalyse].reshape(-1,Nanalyse)
             #print(incrsx.shape)
             
+            # create Gaussian realizations matching each increment-realization's mean and std
+            means = np.mean(incrs, axis=1)
+            stds = np.std(incrs, axis=1, ddof=0)
+            stds[stds == 0] = 1e-12
+            gauss = np.random.normal(loc=means[:, None], scale=stds[:, None], size=incrs.shape)
+
+            # Estimation of information measures
             for ir in range(Nreal):
                 S2[ir,isy,isx] = np.mean(incrs[ir,:]**2)
+                skewness[ir,isy,isx] = skew(incrs[ir,:])
+                flatness[ir,isy,isx] = kurtosis(incrs[ir,:])
+                entropy[ir,isy,isx] = im.entropy(incrs[ir,:])
+                dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="miller_madow")
 
 np.savez(dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
 
