@@ -9,6 +9,7 @@ date: 09/2021
 
 import numpy as np
 import sys
+import os
 
 from Increments import Incrs_anisotropic_generator2d
 
@@ -23,8 +24,12 @@ import infomeasure as im # to compute information measures
 
 #%%
 dir = 'D:/IMT/3A/PRO_COM/PROCOM-2D-Turbulence/simulations/input/'
+save_dir = 'D:/IMT/3A/PRO_COM/PROCOM-2D-Turbulence/simulations/output/'
 sim_n = '01'
 path= dir + 'sim_' + sim_n + '/' + 'vars_k32_v2.nc'
+save_dir = save_dir + 'sim_' + sim_n + '/'
+# Ensure output directory exists to avoid "No such file or directory" when saving
+os.makedirs(save_dir, exist_ok=True)
 
 file2read = netCDF4.Dataset(path,'r')
 #print(file2read.variables.keys())
@@ -73,8 +78,8 @@ entropy = np.zeros((Nreal, len(scales), len(scales)))
 dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
 
 # Radius and angle of the increments
-radius = np.zeros((Nreal, len(scales), len(scales)))
-angle = np.zeros((Nreal, len(scales), len(scales)))
+radius = np.zeros((len(scales), len(scales)))
+angle = np.zeros((len(scales), len(scales)))
 
 # Estimation of all information measures
 for isx in range(len(scales)): #x dimension
@@ -99,15 +104,66 @@ for isx in range(len(scales)): #x dimension
             stds[stds == 0] = 1e-12
             gauss = np.random.normal(loc=means[:, None], scale=stds[:, None], size=incrs.shape)
 
+            # radius[isy,isx] = np.sqrt(scalex**2 + scaley**2)
+            # angle[isy,isx] = np.arctan2(scaley, scalex)
+
             # Estimation of information measures
             for ir in range(Nreal):
                 S2[ir,isy,isx] = np.mean(incrs[ir,:]**2)
-                skewness[ir,isy,isx] = skew(incrs[ir,:])
-                flatness[ir,isy,isx] = kurtosis(incrs[ir,:])
-                entropy[ir,isy,isx] = im.entropy(incrs[ir,:], approach="metric")
-                dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="metric")
+                skewness[ir,isy,isx] = skew(incrs[ir,:], bias=True)
+                flatness[ir,isy,isx] = kurtosis(incrs[ir,:], bias=True)
+                entropy[ir,isy,isx] = im.entropy(incrs[ir,:], approach="kl", k = 5)
+                dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="kl", k = 5)
 
-np.savez(dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
+# %%
+# Visualization of the information measures
+
+plt.figure()
+plt.imshow(np.mean(S2,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
+plt.colorbar()
+plt.title('Second order structure function')
+plt.xlabel('Scale x')
+plt.ylabel('Scale y')
+plt.savefig(save_dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.png', dpi=300)
+plt.show()
+
+plt.figure()
+plt.imshow(np.mean(dist_gauss,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
+plt.colorbar()
+plt.title('Distance to Gaussian distribution')
+plt.xlabel('Scale x')
+plt.ylabel('Scale y')
+plt.savefig(save_dir + 'Vorticity_Dist_Gauss_Image_Nanalyse1024_scales1-100.png', dpi=300)
+plt.show()
+
+plt.figure()
+plt.imshow(np.mean(skewness,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
+plt.colorbar()
+plt.title('Skewness of increments')
+plt.xlabel('Scale x')
+plt.ylabel('Scale y')
+plt.savefig(save_dir + 'Vorticity_Skewness_Image_Nanalyse1024_scales1-100.png', dpi=300)
+plt.show()
+
+plt.figure()
+plt.imshow(np.mean(flatness,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
+plt.colorbar()
+plt.title('Flatness of increments')
+plt.xlabel('Scale x')
+plt.ylabel('Scale y')
+plt.savefig(save_dir + 'Vorticity_Flatness_Image_Nanalyse1024_scales1-100.png', dpi=300)
+plt.show()
+
+plt.figure()
+plt.imshow(np.mean(entropy,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
+plt.colorbar()
+plt.title('Shannon entropy of increments')
+plt.xlabel('Scale x')
+plt.ylabel('Scale y')
+plt.savefig(save_dir + 'Vorticity_Entropy_Image_Nanalyse1024_scales1-100.png', dpi=300)
+plt.show()
+
+np.savez(save_dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
 
 
 

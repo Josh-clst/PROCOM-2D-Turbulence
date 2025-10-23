@@ -21,17 +21,20 @@ time = file2read.variables['time']  # Time
 x = file2read.variables['x']  # X
 y = file2read.variables['y']  # Y
 ww = file2read.variables['q']  # vorticity
+ww = np.squeeze(np.asarray(ww))
+
 print(ww.shape)
 
 incr_scale = 10
+time_increments = np.zeros((incr_scale-1, ww.shape[0]-incr_scale, ww.shape[1], ww.shape[2]))
+print(time_increments.shape)
 
-time_increments = np.zeros((ww.shape[0]-incr_scale, ww.shape[2], ww.shape[3]))
+for scale in range(1,incr_scale):
+    print("Processing scale ", scale, " out of ", incr_scale-1)
+    time_increments[scale,:,:,:] = (ww[scale::,:,:]-ww[0:-scale,:,:])[0:scale-incr_scale,:,:]
 
-for t in range(ww.shape[0]-incr_scale):
-    print(f'Processing time step {t+1} / {ww.shape[0]-incr_scale}')
-    frame_t = np.squeeze(np.asarray(ww[t,:,:]))
-    frame_t_plus_scale = np.squeeze(np.asarray(ww[t + incr_scale - 1,:,:]))
-    increments_t = frame_t_plus_scale - frame_t
-    time_increments[t,:,:] = increments_t
+# Theiler window to avoid temporal correlations (not implemented yet)
 
-np.savez(dir + 'Vorticity_Time_Increments_Scale' + str(incr_scale) + '.npz', time_increments=time_increments)
+
+
+# %%
