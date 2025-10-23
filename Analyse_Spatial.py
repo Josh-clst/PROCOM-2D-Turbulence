@@ -52,7 +52,7 @@ N=len(WW)
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
 Nreal=2 # number of realizations for the statistics
-scaleth=100 # maximum scale to analyse
+scaleth=20 # maximum scale to analyse
 
 # Definition of scales
 scales=np.arange(-scaleth,scaleth+1,1)
@@ -87,13 +87,12 @@ for isx in range(len(scales)): #x dimension
         if scalex!=0 or scaley !=0:
             # Generation of increments
             incrs = Incrs_anisotropic_generator2d(WW, scalex, scaley)
-            
-            # Theiler + random permutation + reshape
-            incrs=incrs[0:-1:scaleth,0:-1:scaleth].flatten()
-            
+
+            # flatten incrs to get a vector
+            incrs = incrs.flatten()
+
             incrs = np.random.permutation(incrs)[0:int(len(incrs)/Nanalyse)*Nanalyse].reshape(-1,Nanalyse)
-            #print(incrsx.shape)
-            
+
             # create Gaussian realizations matching each increment-realization's mean and std
             means = np.mean(incrs, axis=1)
             stds = np.std(incrs, axis=1, ddof=0)
@@ -105,8 +104,8 @@ for isx in range(len(scales)): #x dimension
                 S2[ir,isy,isx] = np.mean(incrs[ir,:]**2)
                 skewness[ir,isy,isx] = skew(incrs[ir,:])
                 flatness[ir,isy,isx] = kurtosis(incrs[ir,:])
-                entropy[ir,isy,isx] = im.entropy(incrs[ir,:])
-                dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="miller_madow")
+                entropy[ir,isy,isx] = im.entropy(incrs[ir,:], approach="metric")
+                dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="metric")
 
 np.savez(dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
 
@@ -115,3 +114,5 @@ np.savez(dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.npz', S2=S2, scalesx
 
 
 
+
+# %%
