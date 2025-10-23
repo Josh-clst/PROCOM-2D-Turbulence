@@ -13,6 +13,8 @@ import os
 
 from Increments import Incrs_anisotropic_generator2d
 
+from dirs import dir, save_dir
+
 from scipy.stats import kurtosis, skew
 
 #import h5py as h5 # for saving the results
@@ -23,8 +25,6 @@ import matplotlib.pyplot as plt
 import infomeasure as im # to compute information measures
 
 #%%
-dir = 'D:/IMT/3A/PRO_COM/PROCOM-2D-Turbulence/simulations/input/'
-save_dir = 'D:/IMT/3A/PRO_COM/PROCOM-2D-Turbulence/simulations/output/'
 sim_n = '01'
 path= dir + 'sim_' + sim_n + '/' + 'vars_k32_v2.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'

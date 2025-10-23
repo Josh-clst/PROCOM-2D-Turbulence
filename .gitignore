@@ -208,3 +208,6 @@ __marimo__/
 
 # Simulations
 simulations/
+
+# dirs.py file containing local directory paths
+dirs.py
