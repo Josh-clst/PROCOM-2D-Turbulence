@@ -81,6 +81,8 @@ dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
 radius = np.zeros((len(scales), len(scales)))
 angle = np.zeros((len(scales), len(scales)))
 
+#%%
+
 # Estimation of all information measures
 for isx in range(len(scales)): #x dimension
     for isy in range(len(scales)): # y dimension
@@ -117,58 +119,57 @@ for isx in range(len(scales)): #x dimension
 
 # %%
 # Visualization of the information measures
+save_graphs = True
 
-plt.figure()
+fig1 = plt.figure()
 plt.imshow(np.mean(S2,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
 plt.colorbar()
 plt.title('Second order structure function')
 plt.xlabel('Scale x')
 plt.ylabel('Scale y')
-plt.savefig(save_dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.png', dpi=300)
 plt.show()
 
-plt.figure()
+fig2 = plt.figure()
 plt.imshow(np.mean(dist_gauss,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
 plt.colorbar()
 plt.title('Distance to Gaussian distribution')
 plt.xlabel('Scale x')
 plt.ylabel('Scale y')
-plt.savefig(save_dir + 'Vorticity_Dist_Gauss_Image_Nanalyse1024_scales1-100.png', dpi=300)
 plt.show()
 
-plt.figure()
+fig3 = plt.figure()
 plt.imshow(np.mean(skewness,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
 plt.colorbar()
 plt.title('Skewness of increments')
 plt.xlabel('Scale x')
 plt.ylabel('Scale y')
-plt.savefig(save_dir + 'Vorticity_Skewness_Image_Nanalyse1024_scales1-100.png', dpi=300)
 plt.show()
 
-plt.figure()
+fig4 = plt.figure()
 plt.imshow(np.mean(flatness,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
 plt.colorbar()
 plt.title('Flatness of increments')
 plt.xlabel('Scale x')
 plt.ylabel('Scale y')
-plt.savefig(save_dir + 'Vorticity_Flatness_Image_Nanalyse1024_scales1-100.png', dpi=300)
 plt.show()
 
-plt.figure()
+fig5 = plt.figure()
 plt.imshow(np.mean(entropy,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
 plt.colorbar()
 plt.title('Shannon entropy of increments')
 plt.xlabel('Scale x')
 plt.ylabel('Scale y')
-plt.savefig(save_dir + 'Vorticity_Entropy_Image_Nanalyse1024_scales1-100.png', dpi=300)
 plt.show()
 
-np.savez(save_dir + 'Vorticity_S2_Image_Nanalyse1024_scales1-100.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
+if save_graphs:
+    # Saving the information measures
+    fig1.savefig(save_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig2.savefig(save_dir + f'Vorticity_Dist_Gauss_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig3.savefig(save_dir + f'Vorticity_Skewness_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig4.savefig(save_dir + f'Vorticity_Flatness_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig5.savefig(save_dir + f'Vorticity_Entropy_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
 
-
-
-
-
+# np.savez(save_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
 
 
 # %%
