@@ -124,6 +124,16 @@ for isx in range(len(scales)): #x dimension
                 entropy[ir,isy,isx] = im.entropy(incrs[ir,:], approach="kl", k = 5)
                 dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="kl", k = 5)
 
+np.savez(save_dir + scale_dir + f'Vorticity_Information_Measures_Nanalyse{Nanalyse}_scales1-{scaleth}.npz',
+         S2=S2,
+         skewness=skewness,
+         flatness=flatness,
+         entropy=entropy,
+         dist_gauss=dist_gauss,
+         scalesx=scales,
+         scalesy=scales)
+
+
 # %%
 # Visualization of the information measures
 save_graphs = True

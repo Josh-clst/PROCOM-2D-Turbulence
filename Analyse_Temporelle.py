@@ -1,4 +1,5 @@
-#%% Import Libraries
+#%% 
+# Import Libraries
 
 import numpy as np
 
@@ -15,10 +16,9 @@ import infomeasure as im # to compute information measures
 
 from scipy.stats import kurtosis, skew
 
-#%%
 sim_n = '01'
 path= dir + 'sim_' + sim_n + '/' + 'vars_k32_v2.nc'
-save_dir = save_dir + 'sim_' + sim_n + '/'
+save_dir = save_dir + 'sim_' + sim_n + '/' + 'Temporal_Analysis/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
 os.makedirs(save_dir, exist_ok=True)
 
@@ -33,142 +33,140 @@ ww = np.squeeze(np.asarray(ww))
 
 print(ww.shape)
 
-incr_scale = 1
+incr_scale = 100
 time_increments = np.zeros((ww.shape[0]-incr_scale, ww.shape[1], ww.shape[2]))
 print(time_increments.shape)
 
 nb_im = time_increments.shape[0]
 
-# %%
-
-time_increments = (ww[incr_scale:,:,:]-ww[0:-incr_scale,:,:])[0:nb_im,:,:]
-
-
-# %%
-
-# Theiler window to avoid temporal correlations (not implemented yet)
-theiler_window = incr_scale / 2
-
 # Initialization of matrix
-S2=np.zeros(nb_im)
+S2=np.zeros(incr_scale)
 
 # Initialization of information measures
 
 # Skewness, flatness
-skewness = np.zeros((nb_im))
-flatness = np.zeros((nb_im))
+skewness = np.zeros((incr_scale))
+flatness = np.zeros((incr_scale))
 
 # Shanon entropy
-entropy = np.zeros((nb_im))
+entropy = np.zeros((incr_scale))
+
 # Distance to Gaussian distribution (Kullback-Leiber divergence)
-dist_gauss = np.zeros((nb_im))
+dist_gauss = np.zeros((incr_scale))
 
-# Gaussian distribution for reference
-gauss_size = time_increments[0,:,:].flatten().shape[0]
-gauss = np.random.normal(0, 1, size=gauss_size)
-
-# 2d FFT
-fft_2d = np.zeros((nb_im, ww.shape[1], ww.shape[2]), dtype=np.complex128)
+# FFT storage
+fft = np.zeros((incr_scale, ww.shape[1], ww.shape[2]), dtype=np.complex128)
 
 # %%
+# Theiler window to avoid temporal correlations (not implemented yet)
+theiler_window = 500
 
-for im_i in range(nb_im):
-    print("Processing time increment ", im_i+1, " / ", nb_im)
-    incr_data = time_increments[im_i,:,:].flatten()
+for scale_i in range(1,incr_scale+1):
+    print(f'Analyzing scale {scale_i} / {incr_scale}')
+
+    time_increments = (ww[scale_i:,:,:]-ww[:-scale_i,:,:])[0:nb_im,:,:]
+
+    incr_data = time_increments[::theiler_window].flatten()
 
     # Second order structure function
-    S2[im_i] = np.mean(incr_data**2)
+    S2[scale_i-1] = np.mean(incr_data**2)
 
     # Skewness and flatness
-    skewness[im_i] = skew(incr_data)
-    flatness[im_i] = kurtosis(incr_data, fisher=False)
+    skewness[scale_i-1] = skew(incr_data)
+    flatness[scale_i-1] = kurtosis(incr_data, fisher=False)
 
     # Shannon entropy
-    entropy[im_i] = im.entropy(incr_data, approach="kl", k = 5)
+    entropy[scale_i-1] = im.entropy(incr_data, approach="kl", k = 5)
 
     # Kullback-Leibler divergence to Gaussian
-    dist_gauss[im_i] = im.kullback_leiber_divergence(incr_data , gauss ,approach="kl", k = 5)
+    dist_gauss[scale_i-1] = 1/2 * np.log(2 * np.pi * np.e * np.var(incr_data)) - entropy[scale_i-1]
 
-    # 2d FFT
-    fft_2d[im_i,:,:] = np.fft.fft2(time_increments[im_i,:,:])
+# %%
+# FFT computation
+fft_scale = np.fft.fft(ww, axis=0)
+phase_spectrum = np.angle(fft_scale)
+fft_scale = np.abs(fft_scale)
+fft_scale = np.mean(fft_scale, axis=(1,2))
+print('FFT computed')
 
+# %%
+save_values = True
+
+if save_values:
+    np.savez(save_dir + f'Vorticity_Temporal_Information_Measures_incrscale{incr_scale}.npz',
+            S2=S2,
+            skewness=skewness,
+            flatness=flatness,
+            entropy=entropy,
+            dist_gauss=dist_gauss,
+            fft=fft_scale
+            )
 
 # %%
 save_graph = True
 
-imgs = np.arange(nb_im)
-
 fig1 = plt.figure(figsize=(8,6))
-plt.plot(imgs, S2, label='S2')
+plt.plot(S2, label='S2')
 plt.title('Second Order Structure Function')
-plt.xlabel('Time Increments')
+plt.xlabel('Scale')
 plt.ylabel('S2')
+plt.xscale('log')
 plt.grid(True)
 
 # FFT Visualization
-fig_fft, axs_fft = plt.subplots(1, 2, figsize=(12, 6))
-magnitude_spectrum = np.abs(fft_2d[0,:,:])
+freq = np.arange(fft_scale.shape[0]) - (fft_scale.shape[0] // 2)
 
-axs_fft[0].imshow(np.fft.fftshift(magnitude_spectrum), cmap='viridis')
-axs_fft[0].set_title('Magnitude Spectrum of First Time Increment')
-axs_fft[0].axis('off')
-phase_spectrum = np.angle(fft_2d[0,:,:])
-axs_fft[1].imshow(np.fft.fftshift(phase_spectrum), cmap='twilight')
-axs_fft[1].set_title('Phase Spectrum of First Time Increment')
-axs_fft[1].axis('off')
+fig_fft, axs_fft = plt.subplots(1, 2, figsize=(12, 6))
+magnitude_spectrum = np.abs(fft_scale)
+
+axs_fft[0].plot(freq, np.fft.fftshift(magnitude_spectrum))
+axs_fft[0].set_title('Magnitude Spectrum')
+axs_fft[0].set_xlabel('Frequency')
+axs_fft[0].set_ylabel('Magnitude')
+axs_fft[0].set_yscale('log')
+
+phase_spectrum_plot = np.mean(phase_spectrum, axis=(1,2))
+axs_fft[1].plot(freq, np.fft.fftshift(phase_spectrum_plot))
+axs_fft[1].set_title('Phase Spectrum')
+axs_fft[1].set_xlabel('Frequency')
+axs_fft[1].set_ylabel('Phase (radians)')
 plt.tight_layout()
 
 # Data visualization of information measures via line plots
 fig2, axs2 = plt.subplots(2, 2, figsize=(12, 10))
 
-axs2[0, 0].plot(imgs, dist_gauss, color='blue')
+axs2[0, 0].plot(dist_gauss, color='blue')
 axs2[0, 0].set_title('Distance to Gaussian (K-L Divergence)')
-axs2[0, 0].set_xlabel('Time Increments')
+axs2[0, 0].set_xlabel('Scale')
 axs2[0, 0].set_ylabel('K-L Divergence')
+axs2[0, 0].set_xscale('log')
 axs2[0, 0].grid(True)
-axs2[0, 1].plot(imgs, skewness, color='orange')
+axs2[0, 1].plot(skewness, color='orange')
 axs2[0, 1].set_title('Skewness')
-axs2[0, 1].set_xlabel('Time Increments')
+axs2[0, 1].set_xlabel('Scale')
 axs2[0, 1].set_ylabel('Skewness')
+axs2[0, 1].set_xscale('log')
 axs2[0, 1].grid(True)
-axs2[1, 0].plot(imgs, flatness, color='green')
+axs2[1, 0].plot(flatness, color='green')
 axs2[1, 0].set_title('Flatness')
-axs2[1, 0].set_xlabel('Time Increments')
+axs2[1, 0].set_xlabel('Scale')
 axs2[1, 0].set_ylabel('Flatness')
 axs2[1, 0].grid(True)
-axs2[1, 1].plot(imgs, entropy, color='red')
+axs2[1, 0].set_xscale('log')
+axs2[1, 1].plot(entropy, color='red')
 axs2[1, 1].set_title('Shannon Entropy')
-axs2[1, 1].set_xlabel('Time Increments')
+axs2[1, 1].set_xlabel('Scale')
 axs2[1, 1].set_ylabel('Entropy')
+axs2[1, 1].set_xscale('log')
 axs2[1, 1].grid(True)
+plt.tight_layout()
 
-# Data Visualization via histograms
-
-fig3, axs3 = plt.subplots(2, 2, figsize=(12, 10))
-
-axs3[0, 0].hist(dist_gauss, bins=30, color='blue', alpha=0.7)
-axs3[0, 0].set_title('Histogram of Distance to Gaussian (K-L Divergence)')
-axs3[0, 0].set_xlabel('K-L Divergence')
-axs3[0, 0].set_ylabel('Frequency')
-axs3[0, 1].hist(skewness, bins=30, color='orange', alpha=0.7)
-axs3[0, 1].set_title('Histogram of Skewness')
-axs3[0, 1].set_xlabel('Skewness')
-axs3[0, 1].set_ylabel('Frequency')
-axs3[1, 0].hist(flatness, bins=30, color='green', alpha=0.7)
-axs3[1, 0].set_title('Histogram of Flatness')
-axs3[1, 0].set_xlabel('Flatness')
-axs3[1, 0].set_ylabel('Frequency')
-axs3[1, 1].hist(entropy, bins=30, color='red', alpha=0.7)
-axs3[1, 1].set_title('Histogram of Shannon Entropy')
-axs3[1, 1].set_xlabel('Entropy')
-axs3[1, 1].set_ylabel('Frequency')
 
 # Save graphs if required
 if save_graph:
     fig_fft.savefig(save_dir + 'Temporal_Analysis_FFT.png', format='png', dpi=300)
     fig1.savefig(save_dir + 'Temporal_Analysis_S2.png', format='png', dpi=300)
     fig2.savefig(save_dir + 'Temporal_Analysis_Info_Measures.png', format='png', dpi=300)
-    fig3.savefig(save_dir + 'Temporal_Analysis_Histograms.png', format='png', dpi=300)
 
 plt.show()
 # %%
