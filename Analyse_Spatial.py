@@ -45,6 +45,7 @@ ls=12.56/ww.shape[1] # sampling distance
 timei=900
 
 WW=ww[timei,:,:]
+print("WW shape :", WW.shape)
 
 # Standard deviation estimation
 sigma=np.std(WW)
@@ -57,7 +58,13 @@ N=len(WW)
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
 Nreal=2 # number of realizations for the statistics
-scaleth=20 # maximum scale to analyse
+scaleth=40 # maximum scale to analyse
+
+
+scale_dir = f'scales_1-{scaleth}/'
+# Ensure scale-specific output directory exists
+if not os.path.exists(save_dir + scale_dir):
+    os.makedirs(save_dir + scale_dir, exist_ok=True)
 
 # Definition of scales
 scales=np.arange(-scaleth,scaleth+1,1)
@@ -129,45 +136,70 @@ plt.xlabel('Scale x')
 plt.ylabel('Scale y')
 plt.show()
 
-fig2 = plt.figure()
-plt.imshow(np.mean(dist_gauss,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
-plt.colorbar()
-plt.title('Distance to Gaussian distribution')
-plt.xlabel('Scale x')
-plt.ylabel('Scale y')
+fig2, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+im0 = axes[0, 0].imshow(np.mean(dist_gauss, axis=0),
+                        extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
+                        origin='lower')
+axes[0, 0].set_title('Distance to Gaussian distribution')
+axes[0, 0].set_xlabel('Scale x')
+axes[0, 0].set_ylabel('Scale y')
+plt.colorbar(im0, ax=axes[0, 0])
+
+im1 = axes[0, 1].imshow(np.mean(skewness, axis=0),
+                        extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
+                        origin='lower')
+axes[0, 1].set_title('Skewness of increments')
+axes[0, 1].set_xlabel('Scale x')
+axes[0, 1].set_ylabel('Scale y')
+plt.colorbar(im1, ax=axes[0, 1])
+
+im2 = axes[1, 0].imshow(np.mean(flatness, axis=0),
+                        extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
+                        origin='lower')
+axes[1, 0].set_title('Flatness of increments')
+axes[1, 0].set_xlabel('Scale x')
+axes[1, 0].set_ylabel('Scale y')
+plt.colorbar(im2, ax=axes[1, 0])
+
+im3 = axes[1, 1].imshow(np.mean(entropy, axis=0),
+                        extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
+                        origin='lower')
+axes[1, 1].set_title('Shannon entropy of increments')
+axes[1, 1].set_xlabel('Scale x')
+axes[1, 1].set_ylabel('Scale y')
+plt.colorbar(im3, ax=axes[1, 1])
+
+plt.tight_layout()
 plt.show()
 
-fig3 = plt.figure()
-plt.imshow(np.mean(skewness,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
-plt.colorbar()
-plt.title('Skewness of increments')
-plt.xlabel('Scale x')
-plt.ylabel('Scale y')
-plt.show()
+# Histograms of the information measures
+fig3, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-fig4 = plt.figure()
-plt.imshow(np.mean(flatness,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
-plt.colorbar()
-plt.title('Flatness of increments')
-plt.xlabel('Scale x')
-plt.ylabel('Scale y')
-plt.show()
-
-fig5 = plt.figure()
-plt.imshow(np.mean(entropy,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
-plt.colorbar()
-plt.title('Shannon entropy of increments')
-plt.xlabel('Scale x')
-plt.ylabel('Scale y')
+axes[0, 0].hist(dist_gauss.flatten(), bins=50, color='blue', alpha=0.7)
+axes[0, 0].set_title('Histogram of Distance to Gaussian distribution')
+axes[0, 0].set_xlabel('Kullback-Leibler Divergence')
+axes[0, 0].set_ylabel('Frequency')
+axes[0, 1].hist(skewness.flatten(), bins=50, color='orange', alpha=0.7)
+axes[0, 1].set_title('Histogram of Skewness')
+axes[0, 1].set_xlabel('Skewness')
+axes[0, 1].set_ylabel('Frequency')
+axes[1, 0].hist(flatness.flatten(), bins=50, color='green', alpha=0.7)
+axes[1, 0].set_title('Histogram of Flatness')
+axes[1, 0].set_xlabel('Flatness')
+axes[1, 0].set_ylabel('Frequency')
+axes[1, 1].hist(entropy.flatten(), bins=50, color='red', alpha=0.7)
+axes[1, 1].set_title('Histogram of Shannon Entropy')
+axes[1, 1].set_xlabel('Entropy')
+axes[1, 1].set_ylabel('Frequency')
+plt.tight_layout()
 plt.show()
 
 if save_graphs:
     # Saving the information measures
-    fig1.savefig(save_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
-    fig2.savefig(save_dir + f'Vorticity_Dist_Gauss_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
-    fig3.savefig(save_dir + f'Vorticity_Skewness_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
-    fig4.savefig(save_dir + f'Vorticity_Flatness_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
-    fig5.savefig(save_dir + f'Vorticity_Entropy_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig1.savefig(save_dir + scale_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig2.savefig(save_dir + scale_dir + f'Vorticity_Results_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
+    fig3.savefig(save_dir + scale_dir + f'Vorticity_Histograms_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
 
 # np.savez(save_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
 
