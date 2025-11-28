@@ -59,14 +59,14 @@ fft = np.zeros((incr_scale, ww.shape[1], ww.shape[2]), dtype=np.complex128)
 
 # %%
 # Theiler window to avoid temporal correlations (not implemented yet)
-theiler_window = 500
+theiler_window = 100
 
 for scale_i in range(1,incr_scale+1):
     print(f'Analyzing scale {scale_i} / {incr_scale}')
 
     time_increments = (ww[scale_i:,:,:]-ww[:-scale_i,:,:])[0:nb_im,:,:]
 
-    incr_data = time_increments[::theiler_window].flatten()
+    incr_data = time_increments.flatten()[::theiler_window]
 
     # Second order structure function
     S2[scale_i-1] = np.mean(incr_data**2)
@@ -84,14 +84,13 @@ for scale_i in range(1,incr_scale+1):
 # %%
 # FFT computation
 fft_scale = np.fft.fft(ww, axis=0)
-phase_spectrum = np.angle(fft_scale)
-fft_scale = np.abs(fft_scale)
-fft_scale = np.mean(fft_scale, axis=(1,2))
-print('FFT computed')
+
 
 # %%
 save_values = True
+load_values = False
 
+# Saving the information measures
 if save_values:
     np.savez(save_dir + f'Vorticity_Temporal_Information_Measures_incrscale{incr_scale}.npz',
             S2=S2,
@@ -101,6 +100,16 @@ if save_values:
             dist_gauss=dist_gauss,
             fft=fft_scale
             )
+    
+# Loading the information measures
+if load_values:
+    data = np.load(save_dir + f'Vorticity_Temporal_Information_Measures_incrscale{incr_scale}.npz')
+    S2 = data['S2']
+    skewness = data['skewness']
+    flatness = data['flatness']
+    entropy = data['entropy']
+    dist_gauss = data['dist_gauss']
+    fft_scale = data['fft']
 
 # %%
 save_graph = True
@@ -117,7 +126,11 @@ plt.grid(True)
 freq = np.arange(fft_scale.shape[0]) - (fft_scale.shape[0] // 2)
 
 fig_fft, axs_fft = plt.subplots(1, 2, figsize=(12, 6))
-magnitude_spectrum = np.abs(fft_scale)
+
+phase_spectrum = np.angle(fft_scale)
+
+fft_scale_abs = np.abs(fft_scale)
+magnitude_spectrum = np.mean(fft_scale_abs, axis=(1,2))
 
 axs_fft[0].plot(freq, np.fft.fftshift(magnitude_spectrum))
 axs_fft[0].set_title('Magnitude Spectrum')

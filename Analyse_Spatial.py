@@ -20,6 +20,8 @@ from scipy.stats import kurtosis, skew
 #import h5py as h5 # for saving the results
 import netCDF4
 
+from skimage.draw import line
+
 import matplotlib.pyplot as plt
 
 import infomeasure as im # to compute information measures
@@ -84,9 +86,6 @@ entropy = np.zeros((Nreal, len(scales), len(scales)))
 # Distance to Gaussian distribution (Kullback-Leiber divergence)
 dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
 
-# Radius and angle of the increments
-radius = np.zeros((len(scales), len(scales)))
-angle = np.zeros((len(scales), len(scales)))
 
 #%%
 
@@ -113,25 +112,98 @@ for isx in range(len(scales)): #x dimension
             stds[stds == 0] = 1e-12
             gauss = np.random.normal(loc=means[:, None], scale=stds[:, None], size=incrs.shape)
 
-            # radius[isy,isx] = np.sqrt(scalex**2 + scaley**2)
-            # angle[isy,isx] = np.arctan2(scaley, scalex)
-
             # Estimation of information measures
             for ir in range(Nreal):
-                S2[ir,isy,isx] = np.mean(incrs[ir,:]**2)
-                skewness[ir,isy,isx] = skew(incrs[ir,:], bias=True)
-                flatness[ir,isy,isx] = kurtosis(incrs[ir,:], bias=True)
-                entropy[ir,isy,isx] = im.entropy(incrs[ir,:], approach="kl", k = 5)
-                dist_gauss[ir,isy,isx] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="kl", k = 5)
+                S2[ir,isx,isy] = np.mean(incrs[ir,:]**2)
+                skewness[ir,isx,isy] = skew(incrs[ir,:], bias=True)
+                flatness[ir,isx,isy] = kurtosis(incrs[ir,:], bias=True)
+                entropy[ir,isx,isy] = im.entropy(incrs[ir,:], approach="kl", k = 5)
+                dist_gauss[ir,isx,isy] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="kl", k = 5)
 
-np.savez(save_dir + scale_dir + f'Vorticity_Information_Measures_Nanalyse{Nanalyse}_scales1-{scaleth}.npz',
-         S2=S2,
-         skewness=skewness,
-         flatness=flatness,
-         entropy=entropy,
-         dist_gauss=dist_gauss,
-         scalesx=scales,
-         scalesy=scales)
+# Avaeraging over realizations
+S2 = np.mean(S2, axis=0)
+skewness = np.mean(skewness, axis=0)
+flatness = np.mean(flatness, axis=0)
+entropy = np.mean(entropy, axis=0)
+dist_gauss = np.mean(dist_gauss, axis=0)
+
+
+# %%
+save_values = True
+
+# Saving the information measures
+if save_values:
+    np.savez(save_dir + scale_dir + f'Vorticity_Information_Measures_Nanalyse{Nanalyse}_scales1-{scaleth}.npz',
+            S2=S2,
+            skewness=skewness,
+            flatness=flatness,
+            entropy=entropy,
+            dist_gauss=dist_gauss,
+            scalesx=scales,
+            scalesy=scales,
+            )
+
+# %%
+
+# Loading the information measures from a file
+load_values = False
+scaleth = 40
+scales = np.arange(-scaleth,scaleth+1,1)
+scale_dir = f'scales_1-{scaleth}/'
+
+if load_values:
+    data = np.load(save_dir + scale_dir + f'Vorticity_Information_Measures_Nanalyse{Nanalyse}_scales1-{scaleth}.npz')
+    S2 = data['S2']
+    skewness = data['skewness']
+    flatness = data['flatness']
+    entropy = data['entropy']
+    dist_gauss = data['dist_gauss']
+    scalesx = data['scalesx']
+    scalesy = data['scalesy']
+
+# %%
+
+n_angles = 8
+
+meshgrid = np.meshgrid(scales,scales)
+
+cnt_row, cnt_col = scaleth, scaleth
+
+radius_angle = []
+skewness_angle = []
+flatness_angle = []
+entropy_angle = []
+dist_gauss_angle = []
+
+for k in range(n_angles):
+
+    dx = np.cos(2*k/n_angles*np.pi)
+    dy = np.sin(-2*k/n_angles*np.pi)
+
+    dx = 0 if np.abs(dx) < 1e-8 else dx
+    dy = 0 if np.abs(dy) < 1e-8 else dy
+    
+    t_min = scaleth / max(np.abs(dx),np.abs(dy))
+
+    epixel_x = int(round(t_min*dx,0)) + scaleth
+    epixel_y = int(round(t_min*dy,0)) + scaleth
+
+    rr, cc = line(cnt_row,cnt_col,epixel_x,epixel_y)
+
+    rr, cc = rr[1:], cc[1:]
+
+    radius_angle.append(ls**2 * np.sqrt( (np.float64(rr-40)**2 + np.float64(cc-40)**2) ) )
+
+    skewness_angle.append(skewness[rr,cc])
+    flatness_angle.append(flatness[rr,cc])
+    entropy_angle.append(entropy[rr,cc])
+    dist_gauss_angle.append(dist_gauss[rr,cc])
+
+# Preparing the data for plotting
+
+radius_angle = [np.log(elt) for elt in radius_angle]
+# flatness_angle = [np.log(elt/3) for elt in radius_angle]
+
 
 
 # %%
@@ -139,7 +211,7 @@ np.savez(save_dir + scale_dir + f'Vorticity_Information_Measures_Nanalyse{Nanaly
 save_graphs = True
 
 fig1 = plt.figure()
-plt.imshow(np.mean(S2,axis=0), extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
+plt.imshow(S2, extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
 plt.colorbar()
 plt.title('Second order structure function')
 plt.xlabel('Scale x')
@@ -148,7 +220,7 @@ plt.show()
 
 fig2, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-im0 = axes[0, 0].imshow(np.mean(dist_gauss, axis=0),
+im0 = axes[0, 0].imshow(dist_gauss,
                         extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
                         origin='lower')
 axes[0, 0].set_title('Distance to Gaussian distribution')
@@ -156,7 +228,7 @@ axes[0, 0].set_xlabel('Scale x')
 axes[0, 0].set_ylabel('Scale y')
 plt.colorbar(im0, ax=axes[0, 0])
 
-im1 = axes[0, 1].imshow(np.mean(skewness, axis=0),
+im1 = axes[0, 1].imshow(skewness,
                         extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
                         origin='lower')
 axes[0, 1].set_title('Skewness of increments')
@@ -164,7 +236,7 @@ axes[0, 1].set_xlabel('Scale x')
 axes[0, 1].set_ylabel('Scale y')
 plt.colorbar(im1, ax=axes[0, 1])
 
-im2 = axes[1, 0].imshow(np.mean(flatness, axis=0),
+im2 = axes[1, 0].imshow(flatness,
                         extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
                         origin='lower')
 axes[1, 0].set_title('Flatness of increments')
@@ -172,7 +244,7 @@ axes[1, 0].set_xlabel('Scale x')
 axes[1, 0].set_ylabel('Scale y')
 plt.colorbar(im2, ax=axes[1, 0])
 
-im3 = axes[1, 1].imshow(np.mean(entropy, axis=0),
+im3 = axes[1, 1].imshow(entropy,
                         extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls],
                         origin='lower')
 axes[1, 1].set_title('Shannon entropy of increments')
@@ -205,13 +277,33 @@ axes[1, 1].set_ylabel('Frequency')
 plt.tight_layout()
 plt.show()
 
+# Plot angular profiles: 4 panels for skewness, flatness, entropy, distance-to-gauss
+fig4, axes = plt.subplots(2, 2, figsize=(12, 10))
+axes = axes.ravel()
+titles = ['Skewness', 'Flatness', 'Shannon entropy', 'Distance to Gaussian']
+data_lists = [skewness_angle, flatness_angle, entropy_angle, dist_gauss_angle]
+
+for i, ax in enumerate(axes):
+    for k in range(n_angles):
+        r = radius_angle[k]
+        d = data_lists[i][k]
+
+        m = min(r.size, d.size)
+        ax.plot(r[:m], d[:m], linestyle='-', label=f'angle {2*k}pi/N')
+    ax.set_title(titles[i])
+    ax.set_xlabel('radius (log scale)' if np.any(np.isfinite(radius_angle)) else 'radius')
+    ax.set_ylabel(titles[i])
+    ax.grid(True)
+    ax.legend(fontsize='small', ncol=2)
+
+plt.tight_layout()
+plt.show()
+
 if save_graphs:
     # Saving the information measures
     fig1.savefig(save_dir + scale_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
     fig2.savefig(save_dir + scale_dir + f'Vorticity_Results_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
     fig3.savefig(save_dir + scale_dir + f'Vorticity_Histograms_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
-
-# np.savez(save_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.npz', S2=S2, scalesx=scales, scalesy=scales, N=N)
-
+    fig4.savefig(save_dir + scale_dir + f'Vorticity_Angular_Profiles_Nanalyse{Nanalyse}_scales1-{scaleth}.png', dpi=300)
 
 # %%
