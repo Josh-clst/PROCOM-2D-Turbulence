@@ -17,7 +17,7 @@ from scipy.stats import kurtosis, skew
 #%%
 from dirs import dir, save_dir
 
-sim_n = '03'
+sim_n = '04'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/' + 'Temporal_Analysis/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -36,7 +36,7 @@ print(ww.shape)
 
 #%%
 
-incr_scale = 9
+incr_scale = 100
 
 # Initialization of matrix
 S2=np.zeros(incr_scale)
@@ -183,4 +183,4 @@ if save_graph:
     fig2.savefig(save_dir + 'Temporal_Analysis_Info_Measures.png', format='png', dpi=300)
 
 plt.show()
-# %%
+ # %%

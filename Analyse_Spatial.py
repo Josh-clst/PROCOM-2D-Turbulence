@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '01'
+sim_n = '03'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -60,7 +60,7 @@ N=len(WW)
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
 Nreal=2 # number of realizations for the statistics
-scaleth=30 # maximum scale to analyse
+scaleth=40 # maximum scale to analyse
 
 
 scale_dir = f'scales_1-{scaleth}/'
@@ -193,7 +193,7 @@ for k in range(n_angles):
 
     rr, cc = rr[1:], cc[1:]
 
-    radius_angle.append(ls**2 * np.sqrt( (np.float64(rr-40)**2 + np.float64(cc-40)**2) ) )
+    radius_angle.append(ls * np.sqrt( (np.float64(rr-40)**2 + np.float64(cc-40)**2) ) )
 
     skewness_angle.append(skewness[rr,cc])
     flatness_angle.append(flatness[rr,cc])
