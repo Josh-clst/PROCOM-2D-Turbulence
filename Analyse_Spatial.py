@@ -13,8 +13,6 @@ import os
 
 from Increments import Incrs_anisotropic_generator2d
 
-from dirs import dir, save_dir
-
 from scipy.stats import kurtosis, skew
 
 #import h5py as h5 # for saving the results
@@ -27,8 +25,10 @@ import matplotlib.pyplot as plt
 import infomeasure as im # to compute information measures
 
 #%%
+from dirs import dir, save_dir
+
 sim_n = '01'
-path= dir + 'sim_' + sim_n + '/' + 'vars_k32_v2.nc'
+path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
 os.makedirs(save_dir, exist_ok=True)
@@ -44,7 +44,7 @@ ww = file2read.variables['q']  # vorticity
 
 ww = np.squeeze(np.asarray(ww))
 ls=12.56/ww.shape[1] # sampling distance
-timei=900
+timei= 9 * ww.shape[0] // 10 
 
 WW=ww[timei,:,:]
 print("WW shape :", WW.shape)
@@ -60,7 +60,7 @@ N=len(WW)
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
 Nreal=2 # number of realizations for the statistics
-scaleth=40 # maximum scale to analyse
+scaleth=30 # maximum scale to analyse
 
 
 scale_dir = f'scales_1-{scaleth}/'
@@ -92,7 +92,6 @@ dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
 # Estimation of all information measures
 for isx in range(len(scales)): #x dimension
     for isy in range(len(scales)): # y dimension
-        print(isx,"/",len(scales), '----' , isy,"/",len(scales))
         
         scalex=scales[isx]
         scaley=scales[isy]
@@ -119,6 +118,8 @@ for isx in range(len(scales)): #x dimension
                 flatness[ir,isx,isy] = kurtosis(incrs[ir,:], bias=True)
                 entropy[ir,isx,isy] = im.entropy(incrs[ir,:], approach="kl", k = 5)
                 dist_gauss[ir,isx,isy] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="kl", k = 5)
+
+    print(isx,"/",len(scales)-1, 'done')
 
 # Avaeraging over realizations
 S2 = np.mean(S2, axis=0)
@@ -202,7 +203,7 @@ for k in range(n_angles):
 # Preparing the data for plotting
 
 radius_angle = [np.log(elt) for elt in radius_angle]
-# flatness_angle = [np.log(elt/3) for elt in radius_angle]
+flatness_angle = [np.log(elt/3) for elt in flatness_angle]
 
 
 
@@ -289,7 +290,7 @@ for i, ax in enumerate(axes):
         d = data_lists[i][k]
 
         m = min(r.size, d.size)
-        ax.plot(r[:m], d[:m], linestyle='-', label=f'angle {2*k}pi/N')
+        ax.plot(r[:m], d[:m], linestyle='-')
     ax.set_title(titles[i])
     ax.set_xlabel('radius (log scale)' if np.any(np.isfinite(radius_angle)) else 'radius')
     ax.set_ylabel(titles[i])

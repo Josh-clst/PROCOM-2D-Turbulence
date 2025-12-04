@@ -207,7 +207,11 @@ marimo/_lsp/
 __marimo__/
 
 # Simulations
-simulations/
+simulations/input/
 
 # dirs.py file containing local directory paths
 dirs.py
+
+# Reject all .npz files
+simulations/output/**/*.npz
+

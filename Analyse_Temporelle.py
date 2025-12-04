@@ -8,16 +8,17 @@ import netCDF4
 
 import matplotlib.pyplot as plt
 
-from dirs import dir, save_dir
-
 import os
 
 import infomeasure as im # to compute information measures
 
 from scipy.stats import kurtosis, skew
 
-sim_n = '01'
-path= dir + 'sim_' + sim_n + '/' + 'vars_k32_v2.nc'
+#%%
+from dirs import dir, save_dir
+
+sim_n = '03'
+path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/' + 'Temporal_Analysis/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
 os.makedirs(save_dir, exist_ok=True)
@@ -33,11 +34,9 @@ ww = np.squeeze(np.asarray(ww))
 
 print(ww.shape)
 
-incr_scale = 100
-time_increments = np.zeros((ww.shape[0]-incr_scale, ww.shape[1], ww.shape[2]))
-print(time_increments.shape)
+#%%
 
-nb_im = time_increments.shape[0]
+incr_scale = 9
 
 # Initialization of matrix
 S2=np.zeros(incr_scale)
@@ -58,13 +57,15 @@ dist_gauss = np.zeros((incr_scale))
 fft = np.zeros((incr_scale, ww.shape[1], ww.shape[2]), dtype=np.complex128)
 
 # %%
-# Theiler window to avoid temporal correlations (not implemented yet)
-theiler_window = 100
+# Theiler window to avoid temporal correlations
+theiler_window = 200
 
 for scale_i in range(1,incr_scale+1):
     print(f'Analyzing scale {scale_i} / {incr_scale}')
 
-    time_increments = (ww[scale_i:,:,:]-ww[:-scale_i,:,:])[0:nb_im,:,:]
+    time_increments = np.zeros((ww.shape[0]-scale_i, ww.shape[1], ww.shape[2]))
+    
+    time_increments = (ww[scale_i:,:,:]-ww[:-scale_i,:,:])
 
     incr_data = time_increments.flatten()[::theiler_window]
 
