@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '01'
+sim_n = '04'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -61,8 +61,8 @@ N=len(WW)
 
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
-scaleth=100 # maximum scale to analyse
-Nreal = 10 # number of realizations to average the information measures over
+scaleth= 50 # maximum scale to analyse
+Nreal = 5 # number of realizations to average the information measures over
 
 scale_dir = f'scales_1-{scaleth}/'
 # Ensure scale-specific output directory exists
