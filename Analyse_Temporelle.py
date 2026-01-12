@@ -58,7 +58,7 @@ fft = np.zeros((incr_scale, ww.shape[1], ww.shape[2]), dtype=np.complex128)
 
 # %%
 # Theiler window to avoid temporal correlations
-theiler_window = 200
+theiler_window = 100
 
 for scale_i in range(1,incr_scale+1):
     print(f'Analyzing scale {scale_i} / {incr_scale}')

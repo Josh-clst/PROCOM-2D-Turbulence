@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '04'
+sim_n = '01'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -49,6 +49,8 @@ timei= 9 * ww.shape[0] // 10
 WW=ww[timei,:,:]
 print("WW shape :", WW.shape)
 
+plt.imshow(WW, label='Vorticity field snapshot', cmap='jet')
+
 # Standard deviation estimation
 sigma=np.std(WW)
 
@@ -59,9 +61,8 @@ N=len(WW)
 
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
-Nreal=2 # number of realizations for the statistics
-scaleth=40 # maximum scale to analyse
-
+scaleth=100 # maximum scale to analyse
+Nreal = 10 # number of realizations to average the information measures over
 
 scale_dir = f'scales_1-{scaleth}/'
 # Ensure scale-specific output directory exists
@@ -72,19 +73,19 @@ if not os.path.exists(save_dir + scale_dir):
 scales=np.arange(-scaleth,scaleth+1,1)
 
 # Initialization of matrix
-S2=np.zeros((Nreal, len(scales),len(scales)))
+S2=np.zeros((len(scales),len(scales),Nreal))
 
 # Initialization of information measures
 
 # Skewness, flatness
-skewness = np.zeros((Nreal, len(scales), len(scales)))
-flatness = np.zeros((Nreal, len(scales), len(scales)))
+skewness = np.zeros((len(scales), len(scales), Nreal))
+flatness = np.zeros((len(scales), len(scales), Nreal))
 
 # Shanon entropy
-entropy = np.zeros((Nreal, len(scales), len(scales)))
+entropy = np.zeros((len(scales), len(scales), Nreal))
 
 # Distance to Gaussian distribution (Kullback-Leiber divergence)
-dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
+dist_gauss = np.zeros((len(scales), len(scales), Nreal))
 
 
 #%%
@@ -92,7 +93,7 @@ dist_gauss = np.zeros((Nreal, len(scales), len(scales)))
 # Estimation of all information measures
 for isx in range(len(scales)): #x dimension
     for isy in range(len(scales)): # y dimension
-        
+
         scalex=scales[isx]
         scaley=scales[isy]
         
@@ -111,22 +112,20 @@ for isx in range(len(scales)): #x dimension
             stds[stds == 0] = 1e-12
             gauss = np.random.normal(loc=means[:, None], scale=stds[:, None], size=incrs.shape)
 
-            # Estimation of information measures
             for ir in range(Nreal):
-                S2[ir,isx,isy] = np.mean(incrs[ir,:]**2)
-                skewness[ir,isx,isy] = skew(incrs[ir,:], bias=True)
-                flatness[ir,isx,isy] = kurtosis(incrs[ir,:], bias=True)
-                entropy[ir,isx,isy] = im.entropy(incrs[ir,:], approach="kl", k = 5)
-                dist_gauss[ir,isx,isy] = im.kullback_leiber_divergence(incrs[ir,:] , gauss[ir,:] ,approach="kl", k = 5)
-
+                S2[isx,isy,ir] = np.mean(incrs[ir]**2)
+                skewness[isx,isy,ir] = skew(incrs[ir], bias=True)
+                flatness[isx,isy,ir] = kurtosis(incrs[ir], bias=True)
+                entropy[isx,isy,ir] = im.entropy(incrs[ir], approach="kl", k = 5)
+                dist_gauss[isx,isy,ir] = im.kullback_leiber_divergence(incrs[ir], gauss[ir], approach="kl", k = 5)
     print(isx,"/",len(scales)-1, 'done')
 
-# Avaeraging over realizations
-S2 = np.mean(S2, axis=0)
-skewness = np.mean(skewness, axis=0)
-flatness = np.mean(flatness, axis=0)
-entropy = np.mean(entropy, axis=0)
-dist_gauss = np.mean(dist_gauss, axis=0)
+# Averaging over realizations
+S2 = np.mean(S2, axis=2)
+skewness = np.mean(skewness, axis=2)
+flatness = np.mean(flatness, axis=2)
+entropy = np.mean(entropy, axis=2)
+dist_gauss = np.mean(dist_gauss, axis=2)
 
 
 # %%
@@ -179,7 +178,7 @@ dist_gauss_angle = []
 for k in range(n_angles):
 
     dx = np.cos(2*k/n_angles*np.pi)
-    dy = np.sin(-2*k/n_angles*np.pi)
+    dy = np.sin(2*k/n_angles*np.pi)
 
     dx = 0 if np.abs(dx) < 1e-8 else dx
     dy = 0 if np.abs(dy) < 1e-8 else dy
@@ -193,7 +192,7 @@ for k in range(n_angles):
 
     rr, cc = rr[1:], cc[1:]
 
-    radius_angle.append(ls * np.sqrt( (np.float64(rr-40)**2 + np.float64(cc-40)**2) ) )
+    radius_angle.append(ls * np.sqrt( (np.float64(rr-scaleth)**2 + np.float64(cc-scaleth)**2) ) )
 
     skewness_angle.append(skewness[rr,cc])
     flatness_angle.append(flatness[rr,cc])
@@ -203,7 +202,7 @@ for k in range(n_angles):
 # Preparing the data for plotting
 
 radius_angle = [np.log(elt) for elt in radius_angle]
-flatness_angle = [np.log(elt/3) for elt in flatness_angle]
+flatness_angle = [np.log((elt+3)/3) for elt in flatness_angle]
 
 
 
@@ -291,11 +290,11 @@ for i, ax in enumerate(axes):
 
         m = min(r.size, d.size)
         ax.plot(r[:m], d[:m], linestyle='-')
+    
     ax.set_title(titles[i])
     ax.set_xlabel('radius (log scale)' if np.any(np.isfinite(radius_angle)) else 'radius')
     ax.set_ylabel(titles[i])
     ax.grid(True)
-    ax.legend(fontsize='small', ncol=2)
 
 plt.tight_layout()
 plt.show()
