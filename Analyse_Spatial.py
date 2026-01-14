@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '04'
+sim_n = '03'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -285,7 +285,7 @@ for i, ax in enumerate(axes):
     entropy_slopes = np.zeros(n_angles)
     c_intercept = np.zeros(n_angles)
 
-    cutoff_radius = -1
+    cutoff_radius = -2.5
 
     for k in range(n_angles):
         r = radius_angle[k]
@@ -301,7 +301,7 @@ for i, ax in enumerate(axes):
             r_fit = r[mask]
             d_fit = d[mask]
 
-            if r.size > 1:
+            if r_fit.size > 1:
                 A = np.vstack([r_fit, np.ones(len(r_fit))]).T
                 m, c = np.linalg.lstsq(A, d_fit, rcond=None)[0]
                 entropy_slopes[k] = m
@@ -310,11 +310,37 @@ for i, ax in enumerate(axes):
     if i == 2:
         r_fit = np.linspace(min(radius_angle[0]), cutoff_radius, 100)
         
-        m_slope = np.mean(entropy_slopes) if i == 2 else 0
-        c_intercept = np.mean(c_intercept)
+        m_slope_m = np.mean(entropy_slopes) if i == 2 else 0
+        c_intercept_m = np.mean(c_intercept)
 
-        ax.plot(r_fit, m_slope * r_fit + c_intercept, linestyle='--', color='black', label='Fit')
+        ax.plot(r_fit, m_slope_m * r_fit + c_intercept_m, linestyle='--', color='black', label='Fit')
         ax.legend()
+
+        # Above cutoff radius, plot dashed line
+        if sim_n == '03':
+            for k in range(n_angles):
+                r = radius_angle[k]
+                d = data_lists[i][k]
+
+                # applying cutoff radius
+                mask = r >= cutoff_radius
+                r_fit = r[mask]
+                d_fit = d[mask]
+
+                if r_fit.size > 1:
+                    A = np.vstack([r_fit, np.ones(len(r_fit))]).T
+                    m, c = np.linalg.lstsq(A, d_fit, rcond=None)[0]
+                    entropy_slopes[k] = m
+                    c_intercept[k] = c
+
+            r_above = np.linspace(cutoff_radius, max(radius_angle[0]), 100)
+
+            m_slope = np.mean(entropy_slopes) if i == 2 else 0
+            c_intercept = np.mean(c_intercept)
+
+            ax.plot(r_fit, m_slope * r_fit + c_intercept, linestyle='--', color='blue', label='Fit above cutoff')
+            ax.legend()
+
     
     ax.set_title(titles[i])
     ax.set_xlabel('radius (log scale)' if np.any(np.isfinite(radius_angle)) else 'radius')
