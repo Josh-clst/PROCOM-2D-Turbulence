@@ -129,7 +129,7 @@ dist_gauss = np.mean(dist_gauss, axis=2)
 
 
 # %%
-save_values = True
+save_values = False
 
 # Saving the information measures
 if save_values:
@@ -146,8 +146,7 @@ if save_values:
 # %%
 
 # Loading the information measures from a file
-load_values = False
-scaleth = 40
+load_values = True
 scales = np.arange(-scaleth,scaleth+1,1)
 scale_dir = f'scales_1-{scaleth}/'
 
@@ -203,8 +202,6 @@ for k in range(n_angles):
 
 radius_angle = [np.log(elt) for elt in radius_angle]
 flatness_angle = [np.log((elt+3)/3) for elt in flatness_angle]
-
-
 
 # %%
 # Visualization of the information measures
@@ -284,12 +281,40 @@ titles = ['Skewness', 'Flatness', 'Shannon entropy', 'Distance to Gaussian']
 data_lists = [skewness_angle, flatness_angle, entropy_angle, dist_gauss_angle]
 
 for i, ax in enumerate(axes):
+
+    entropy_slopes = np.zeros(n_angles)
+    c_intercept = np.zeros(n_angles)
+
+    cutoff_radius = -1
+
     for k in range(n_angles):
         r = radius_angle[k]
         d = data_lists[i][k]
 
         m = min(r.size, d.size)
         ax.plot(r[:m], d[:m], linestyle='-')
+
+        if i == 2:  # Entropy plot
+
+            # applying cutoff radius
+            mask = r < cutoff_radius
+            r_fit = r[mask]
+            d_fit = d[mask]
+
+            if r.size > 1:
+                A = np.vstack([r_fit, np.ones(len(r_fit))]).T
+                m, c = np.linalg.lstsq(A, d_fit, rcond=None)[0]
+                entropy_slopes[k] = m
+                c_intercept[k] = c
+
+    if i == 2:
+        r_fit = np.linspace(min(radius_angle[0]), cutoff_radius, 100)
+        
+        m_slope = np.mean(entropy_slopes) if i == 2 else 0
+        c_intercept = np.mean(c_intercept)
+
+        ax.plot(r_fit, m_slope * r_fit + c_intercept, linestyle='--', color='black', label='Fit')
+        ax.legend()
     
     ax.set_title(titles[i])
     ax.set_xlabel('radius (log scale)' if np.any(np.isfinite(radius_angle)) else 'radius')
