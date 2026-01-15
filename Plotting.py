@@ -1,11 +1,4 @@
-"""
-This python ...
-
-authors: C. Granero-Belinchon (IMT- Atlantique).
-
-date: 09/2021
-"""
-#%% Import Libraries
+# %%
 
 import numpy as np
 import sys
@@ -23,11 +16,15 @@ from skimage.draw import line
 import matplotlib.pyplot as plt
 
 import infomeasure as im # to compute information measures
-
-#%%
 from dirs import dir, save_dir
 
-sim_n = '03'
+# Parameters definition
+Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
+scaleth= 50 # maximum scale to analyse
+Nreal = 5 # number of realizations to average the information measures over
+n_angles = 8
+
+sim_n = '04'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -59,11 +56,6 @@ WW=(WW)/sigma
 
 N=len(WW)
 
-# Parameters definition
-Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
-scaleth= 50 # maximum scale to analyse
-Nreal = 5 # number of realizations to average the information measures over
-
 scale_dir = f'scales_1-{scaleth}/'
 # Ensure scale-specific output directory exists
 if not os.path.exists(save_dir + scale_dir):
@@ -87,65 +79,6 @@ entropy = np.zeros((len(scales), len(scales), Nreal))
 # Distance to Gaussian distribution (Kullback-Leiber divergence)
 dist_gauss = np.zeros((len(scales), len(scales), Nreal))
 
-
-#%%
-
-# Estimation of all information measures
-for isx in range(len(scales)): #x dimension
-    for isy in range(len(scales)): # y dimension
-
-        scalex=scales[isx]
-        scaley=scales[isy]
-        
-        if scalex!=0 or scaley !=0:
-            # Generation of increments
-            incrs = Incrs_anisotropic_generator2d(WW, scalex, scaley)
-
-            # flatten incrs to get a vector
-            incrs = incrs.flatten()
-
-            incrs = np.random.permutation(incrs)[0:int(len(incrs)/Nanalyse)*Nanalyse].reshape(-1,Nanalyse)
-
-            # create Gaussian realizations matching each increment-realization's mean and std
-            means = np.mean(incrs, axis=1)
-            stds = np.std(incrs, axis=1, ddof=0)
-            stds[stds == 0] = 1e-12
-            gauss = np.random.normal(loc=means[:, None], scale=stds[:, None], size=incrs.shape)
-
-            for ir in range(Nreal):
-                S2[isx,isy,ir] = np.mean(incrs[ir]**2)
-                skewness[isx,isy,ir] = skew(incrs[ir], bias=True)
-                flatness[isx,isy,ir] = kurtosis(incrs[ir], bias=True)
-                entropy[isx,isy,ir] = im.entropy(incrs[ir], approach="kl", k = 5)
-                dist_gauss[isx,isy,ir] = im.kullback_leiber_divergence(incrs[ir], gauss[ir], approach="kl", k = 5)
-    print(isx,"/",len(scales)-1, 'done')
-
-# Averaging over realizations
-S2 = np.mean(S2, axis=2)
-skewness = np.mean(skewness, axis=2)
-flatness = np.mean(flatness, axis=2)
-entropy = np.mean(entropy, axis=2)
-dist_gauss = np.mean(dist_gauss, axis=2)
-
-
-# %%
-save_values = False
-
-# Saving the information measures
-if save_values:
-    np.savez(save_dir + scale_dir + f'Vorticity_Information_Measures_Nanalyse{Nanalyse}_scales1-{scaleth}.npz',
-            S2=S2,
-            skewness=skewness,
-            flatness=flatness,
-            entropy=entropy,
-            dist_gauss=dist_gauss,
-            scalesx=scales,
-            scalesy=scales,
-            )
-
-# %%
-
-# Loading the information measures from a file
 load_values = True
 scales = np.arange(-scaleth,scaleth+1,1)
 scale_dir = f'scales_1-{scaleth}/'
@@ -159,10 +92,6 @@ if load_values:
     dist_gauss = data['dist_gauss']
     scalesx = data['scalesx']
     scalesy = data['scalesy']
-
-# %%
-
-n_angles = 8
 
 meshgrid = np.meshgrid(scales,scales)
 
@@ -203,7 +132,6 @@ for k in range(n_angles):
 radius_angle = [np.log(elt) for elt in radius_angle]
 flatness_angle = [np.log((elt+3)/3) for elt in flatness_angle]
 
-# %%
 # Visualization of the information measures
 save_graphs = True
 
@@ -285,7 +213,8 @@ for i, ax in enumerate(axes):
     entropy_slopes = np.zeros(n_angles)
     c_intercept = np.zeros(n_angles)
 
-    cutoff_radius = -2.5
+    cutoff_radius = -5
+    cutoff_radius_2 = -3
 
     for k in range(n_angles):
         r = radius_angle[k]
@@ -311,19 +240,19 @@ for i, ax in enumerate(axes):
         r_fit = np.linspace(min(radius_angle[0]), cutoff_radius, 100)
         
         m_slope_m = np.mean(entropy_slopes) if i == 2 else 0
-        c_intercept_m = np.mean(c_intercept)
+        c_intercept_m = np.mean(c_intercept) + 0.1
 
-        ax.plot(r_fit, m_slope_m * r_fit + c_intercept_m, linestyle='--', color='black', label='Fit')
+        ax.plot(r_fit, m_slope_m * r_fit + c_intercept_m, linestyle='--', color='black', label=f'Fit below cutoff (slope={m_slope_m:.2f})')
         ax.legend()
 
         # Above cutoff radius, plot dashed line
-        if sim_n == '03':
+        if sim_n == '03' or sim_n == '04':
             for k in range(n_angles):
                 r = radius_angle[k]
                 d = data_lists[i][k]
 
                 # applying cutoff radius
-                mask = r >= cutoff_radius
+                mask = np.all([r > cutoff_radius, r < cutoff_radius_2], axis=0)
                 r_fit = r[mask]
                 d_fit = d[mask]
 
@@ -336,9 +265,9 @@ for i, ax in enumerate(axes):
             r_above = np.linspace(cutoff_radius, max(radius_angle[0]), 100)
 
             m_slope = np.mean(entropy_slopes) if i == 2 else 0
-            c_intercept = np.mean(c_intercept)
+            c_intercept = np.mean(c_intercept) + 0.1
 
-            ax.plot(r_fit, m_slope * r_fit + c_intercept, linestyle='--', color='blue', label='Fit above cutoff')
+            ax.plot(r_fit, m_slope * r_fit + c_intercept, linestyle='--', color='blue', label=f'Fit above cutoff (slope={m_slope:.2f})')
             ax.legend()
 
     
@@ -356,5 +285,4 @@ if save_graphs:
     fig2.savefig(save_dir + scale_dir + f'Vorticity_Results_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
     fig3.savefig(save_dir + scale_dir + f'Vorticity_Histograms_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
     fig4.savefig(save_dir + scale_dir + f'Vorticity_Angular_Profiles_Nanalyse{Nanalyse}_scales1-{scaleth}.png', dpi=300)
-
 # %%
