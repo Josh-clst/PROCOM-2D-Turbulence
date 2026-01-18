@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '03'
+sim_n = '01'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -61,7 +61,7 @@ N=len(WW)
 
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
-scaleth= 50 # maximum scale to analyse
+scaleth= 100 # maximum scale to analyse
 Nreal = 5 # number of realizations to average the information measures over
 
 scale_dir = f'scales_1-{scaleth}/'
@@ -282,69 +282,40 @@ data_lists = [skewness_angle, flatness_angle, entropy_angle, dist_gauss_angle]
 
 for i, ax in enumerate(axes):
 
-    entropy_slopes = np.zeros(n_angles)
-    c_intercept = np.zeros(n_angles)
+    cutoff_radius = [-6, -5]
+    n_cutoff = len(cutoff_radius)
+    
+    # Aggregate data from all angles
+    r_all = np.concatenate(radius_angle)
+    d_all = np.concatenate([data_lists[i][k] for k in range(n_angles)])
+    
+    if i == 2:  # Entropy plot
+        for j in range(-1, n_cutoff):
+            cutoff_1 = cutoff_radius[j] if j != -1 else -np.inf
+            cutoff_2 = cutoff_radius[j+1] if j != n_cutoff-1 else np.inf
 
-    cutoff_radius = -2.5
+            mask = np.all([r_all > cutoff_1, r_all < cutoff_2], axis=0)
 
+            r_fit = r_all[mask]
+            d_fit = d_all[mask]
+
+            if r_fit.size > 1:
+                coeffs = np.polyfit(r_fit, d_fit, 1)
+                fit_line = np.polyval(coeffs, r_fit) + 0.15
+                colors = ['red', 'green', 'blue']
+                ax.plot(r_fit, fit_line, linestyle='--', color=colors[j], label="Slope: {:.2f}".format(coeffs[0]))
+    
+    # Plot all angles
     for k in range(n_angles):
         r = radius_angle[k]
         d = data_lists[i][k]
-
         m = min(r.size, d.size)
         ax.plot(r[:m], d[:m], linestyle='-')
 
-        if i == 2:  # Entropy plot
-
-            # applying cutoff radius
-            mask = r < cutoff_radius
-            r_fit = r[mask]
-            d_fit = d[mask]
-
-            if r_fit.size > 1:
-                A = np.vstack([r_fit, np.ones(len(r_fit))]).T
-                m, c = np.linalg.lstsq(A, d_fit, rcond=None)[0]
-                entropy_slopes[k] = m
-                c_intercept[k] = c
-
-    if i == 2:
-        r_fit = np.linspace(min(radius_angle[0]), cutoff_radius, 100)
-        
-        m_slope_m = np.mean(entropy_slopes) if i == 2 else 0
-        c_intercept_m = np.mean(c_intercept)
-
-        ax.plot(r_fit, m_slope_m * r_fit + c_intercept_m, linestyle='--', color='black', label='Fit')
-        ax.legend()
-
-        # Above cutoff radius, plot dashed line
-        if sim_n == '03':
-            for k in range(n_angles):
-                r = radius_angle[k]
-                d = data_lists[i][k]
-
-                # applying cutoff radius
-                mask = r >= cutoff_radius
-                r_fit = r[mask]
-                d_fit = d[mask]
-
-                if r_fit.size > 1:
-                    A = np.vstack([r_fit, np.ones(len(r_fit))]).T
-                    m, c = np.linalg.lstsq(A, d_fit, rcond=None)[0]
-                    entropy_slopes[k] = m
-                    c_intercept[k] = c
-
-            r_above = np.linspace(cutoff_radius, max(radius_angle[0]), 100)
-
-            m_slope = np.mean(entropy_slopes) if i == 2 else 0
-            c_intercept = np.mean(c_intercept)
-
-            ax.plot(r_fit, m_slope * r_fit + c_intercept, linestyle='--', color='blue', label='Fit above cutoff')
-            ax.legend()
-
-    
     ax.set_title(titles[i])
     ax.set_xlabel('radius (log scale)' if np.any(np.isfinite(radius_angle)) else 'radius')
     ax.set_ylabel(titles[i])
+    ax.legend()
     ax.grid(True)
 
 plt.tight_layout()
