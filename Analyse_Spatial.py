@@ -282,7 +282,7 @@ data_lists = [skewness_angle, flatness_angle, entropy_angle, dist_gauss_angle]
 
 for i, ax in enumerate(axes):
 
-    cutoff_radius = [-6, -5]
+    cutoff_radius = [-5.5, -4.5]
     n_cutoff = len(cutoff_radius)
     
     # Aggregate data from all angles
@@ -301,7 +301,7 @@ for i, ax in enumerate(axes):
 
             if r_fit.size > 1:
                 coeffs = np.polyfit(r_fit, d_fit, 1)
-                fit_line = np.polyval(coeffs, r_fit) + 0.15
+                fit_line = np.polyval(coeffs, r_fit) + 0.1
                 colors = ['red', 'green', 'blue']
                 ax.plot(r_fit, fit_line, linestyle='--', color=colors[j], label="Slope: {:.2f}".format(coeffs[0]))
     

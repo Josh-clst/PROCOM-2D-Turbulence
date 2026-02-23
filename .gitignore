@@ -215,3 +215,4 @@ dirs.py
 # Reject all .npz files
 simulations/output/**/*.npz
 
+.vscode/settings.json
