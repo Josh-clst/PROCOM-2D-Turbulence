@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '01'
+sim_n = '03'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -44,7 +44,7 @@ ww = file2read.variables['q']  # vorticity
 
 ww = np.squeeze(np.asarray(ww))
 ls=12.56/ww.shape[1] # sampling distance
-timei= 9 * ww.shape[0] // 10 
+timei= 0
 
 WW=ww[timei,:,:]
 print("WW shape :", WW.shape)
@@ -61,8 +61,8 @@ N=len(WW)
 
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
-scaleth= 100 # maximum scale to analyse
-Nreal = 5 # number of realizations to average the information measures over
+scaleth= 20 # maximum scale to analyse
+Nreal = 2 # number of realizations to average the information measures over
 
 scale_dir = f'scales_1-{scaleth}/'
 # Ensure scale-specific output directory exists
@@ -191,7 +191,7 @@ for k in range(n_angles):
 
     rr, cc = rr[1:], cc[1:]
 
-    radius_angle.append(ls * np.sqrt( (np.float64(rr-scaleth)**2 + np.float64(cc-scaleth)**2) ) / 12.56)
+    radius_angle.append(np.sqrt( (np.float64(rr-scaleth)**2 + np.float64(cc-scaleth)**2) ) / ww.shape[1])
 
     skewness_angle.append(skewness[rr,cc])
     flatness_angle.append(flatness[rr,cc])
@@ -282,7 +282,7 @@ data_lists = [skewness_angle, flatness_angle, entropy_angle, dist_gauss_angle]
 
 for i, ax in enumerate(axes):
 
-    cutoff_radius = [-5.5, -4.5]
+    cutoff_radius = []
     n_cutoff = len(cutoff_radius)
     
     # Aggregate data from all angles
@@ -290,21 +290,22 @@ for i, ax in enumerate(axes):
     d_all = np.concatenate([data_lists[i][k] for k in range(n_angles)])
     
     if i == 2:  # Entropy plot
-        for j in range(-1, n_cutoff):
-            cutoff_1 = cutoff_radius[j] if j != -1 else -np.inf
-            cutoff_2 = cutoff_radius[j+1] if j != n_cutoff-1 else np.inf
+        if cutoff_radius:
+            for j in range(-1, n_cutoff):
+                cutoff_1 = cutoff_radius[j] if j != -1 else -np.inf
+                cutoff_2 = cutoff_radius[j+1] if j != n_cutoff-1 else np.inf
 
-            mask = np.all([r_all > cutoff_1, r_all < cutoff_2], axis=0)
+                mask = np.all([r_all > cutoff_1, r_all < cutoff_2], axis=0)
 
-            r_fit = r_all[mask]
-            d_fit = d_all[mask]
+                r_fit = r_all[mask]
+                d_fit = d_all[mask]
 
-            if r_fit.size > 1:
-                coeffs = np.polyfit(r_fit, d_fit, 1)
-                fit_line = np.polyval(coeffs, r_fit) + 0.1
-                colors = ['red', 'green', 'blue']
-                ax.plot(r_fit, fit_line, linestyle='--', color=colors[j], label="Slope: {:.2f}".format(coeffs[0]))
-    
+                if r_fit.size > 1:
+                    coeffs = np.polyfit(r_fit, d_fit, 1)
+                    fit_line = np.polyval(coeffs, r_fit) + 0.1
+                    colors = ['red', 'green', 'blue']
+                    ax.plot(r_fit, fit_line, linestyle='--', color=colors[j], label="Slope: {:.2f}".format(coeffs[0]))
+        
     # Plot all angles
     for k in range(n_angles):
         r = radius_angle[k]

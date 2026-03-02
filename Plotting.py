@@ -14,9 +14,10 @@ import infomeasure as im # to compute information measures
 from dirs import dir, save_dir
 
 # Parameters definition
-sim_list = ['01', '03']
+sim_list = ['01', '02']
 n_sim = len(sim_list)
 scaleth_list= [75, 50]
+cutoff_radius = [-6, -5]
 
 n_angles = 8
 
@@ -25,9 +26,9 @@ fig4, axes = plt.subplots(2, 2, figsize=(12, 10))
 axes = axes.ravel()
 titles = ['Skewness', 'Flatness', 'Shannon entropy', 'Distance to Gaussian']
 
-for i in range(n_sim):
-    sim_n = sim_list[i]
-    scaleth = scaleth_list[i]
+for j in range(n_sim):
+    sim_n = sim_list[j]
+    scaleth = scaleth_list[j]
 
     radius_angle = []
     skewness_angle = []
@@ -107,7 +108,7 @@ for i in range(n_sim):
 
         rr, cc = rr[1:], cc[1:]
 
-        radius_angle.append(np.log(ls * np.sqrt( (np.float64(rr-scaleth)**2 + np.float64(cc-scaleth)**2) ) / 12.56))
+        radius_angle.append(np.log(np.sqrt( (np.float64(rr-scaleth)**2 + np.float64(cc-scaleth)**2) ) / ww.shape[1]))
 
         skewness_angle.append(skewness[rr,cc])
         flatness_angle.append(np.log((flatness[rr,cc]+3)/3))
@@ -120,14 +121,13 @@ for i in range(n_sim):
 
     for i, ax in enumerate(axes):
 
-        cutoff_radius = [-6, -5]
         n_cutoff = len(cutoff_radius)
         
         # Aggregate data from all angles
         r_all = np.concatenate(radius_angle)
         d_all = np.concatenate([data_lists[i][k] for k in range(n_angles)])
         
-        if i == 2:  # Entropy plot
+        if i == 2:  # Regression for first simulation plotted foir the entropy graph
             for j in range(-1, n_cutoff):
                 cutoff_1 = cutoff_radius[j] if j != -1 else -np.inf
                 cutoff_2 = cutoff_radius[j+1] if j != n_cutoff-1 else np.inf
