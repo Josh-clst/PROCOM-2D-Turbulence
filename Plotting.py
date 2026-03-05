@@ -19,6 +19,11 @@ n_sim = len(sim_list)
 scaleth_list= [50, 50]
 cutoff_radius = [-5, -3]
 
+if "03" in sim_list:
+    K = 4
+else:
+    K = 32
+
 data_chunks = [[] for k in range(len(cutoff_radius)+1)]
 coeffs_chunks = [[] for k in range(len(cutoff_radius)+1)]
 
@@ -53,7 +58,8 @@ for j in range(n_sim):
     ww = file2read.variables['q']  # vorticity
 
     ww = np.squeeze(np.asarray(ww))
-    ls=12.56/ww.shape[1] # sampling distance
+    box_size = 12.56
+    ls= box_size / ww.shape[1] # sampling distance
     timei= 9 * ww.shape[0] // 10 
 
     WW=ww[timei,:,:]
@@ -161,6 +167,8 @@ for j in range(n_sim):
         ax.grid(True)
 
 ax = axes[2]
+vertical_line_position =  np.log(1/K * 2/box_size)
+ax.axvline(x=vertical_line_position, color='black', linestyle='--', label='Energy Injection Radius')
 for i, r_fit in enumerate(data_chunks):
     
     data = np.concatenate(r_fit)
@@ -196,6 +204,9 @@ sim_dir = sim_dir[:-1] + '/'
 if not os.path.exists(out_dir + sim_dir):
     os.makedirs(out_dir + sim_dir, exist_ok=True)
 
-fig4.savefig(out_dir + sim_dir + f'Vorticity_Angular_Profiles_Nanalyse1024_scales1-{scale_name}.png', dpi=300)
+save_graph = True
+
+if save_graph:
+    fig4.savefig(out_dir + sim_dir + f'Vorticity_Angular_Profiles_Nanalyse1024_scales1-{scale_name}-Injection.png', dpi=300)
 
 # %%
