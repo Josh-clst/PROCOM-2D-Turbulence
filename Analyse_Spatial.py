@@ -77,14 +77,10 @@ S2=np.zeros((len(scales),len(scales),Nreal))
 
 # Initialization of information measures
 
-# Skewness, flatness
+
 skewness = np.zeros((len(scales), len(scales), Nreal))
 flatness = np.zeros((len(scales), len(scales), Nreal))
-
-# Shanon entropy
 entropy = np.zeros((len(scales), len(scales), Nreal))
-
-# Distance to Gaussian distribution (Kullback-Leiber divergence)
 dist_gauss = np.zeros((len(scales), len(scales), Nreal))
 
 
@@ -101,7 +97,6 @@ for isx in range(len(scales)): #x dimension
             # Generation of increments
             incrs = Incrs_anisotropic_generator2d(WW, scalex, scaley)
 
-            # flatten incrs to get a vector
             incrs = incrs.flatten()
 
             incrs = np.random.permutation(incrs)[0:int(len(incrs)/Nanalyse)*Nanalyse].reshape(-1,Nanalyse)

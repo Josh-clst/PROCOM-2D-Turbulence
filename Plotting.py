@@ -14,10 +14,13 @@ import infomeasure as im # to compute information measures
 from dirs import dir, save_dir
 
 # Parameters definition
-sim_list = ['01', '02']
+sim_list = ['03', '04']
 n_sim = len(sim_list)
-scaleth_list= [75, 50]
-cutoff_radius = [-6, -5]
+scaleth_list= [50, 50]
+cutoff_radius = [-5, -3]
+
+data_chunks = [[] for k in range(len(cutoff_radius)+1)]
+coeffs_chunks = [[] for k in range(len(cutoff_radius)+1)]
 
 n_angles = 8
 
@@ -139,9 +142,10 @@ for j in range(n_sim):
 
                 if r_fit.size > 1:
                     coeffs = np.polyfit(r_fit, d_fit, 1)
-                    fit_line = np.polyval(coeffs, r_fit) + 0.15
-                    colors = ['red', 'green', 'blue']
-                    ax.plot(r_fit, fit_line, linestyle='--', color=colors[j], label="Slope: {:.2f}".format(coeffs[0]))
+                    
+                    if coeffs[0] >= 0:
+                        coeffs_chunks[j].append(coeffs)
+                        data_chunks[j].append(r_fit)                        
         
         # Plot all angles
         for k in range(n_angles):
@@ -155,6 +159,21 @@ for j in range(n_sim):
         ax.set_ylabel(titles[i])
         ax.legend()
         ax.grid(True)
+
+ax = axes[2]
+for i, r_fit in enumerate(data_chunks):
+    
+    data = np.concatenate(r_fit)
+    coeff_list = coeffs_chunks[i]
+    coeffs = np.zeros((len(coeff_list),2))
+    for j, elt in enumerate(coeff_list):
+        coeffs[j,:] = elt
+    coeffs = np.mean(coeffs, axis = 0)
+
+    fit_line = np.polyval(coeffs, data) + 0.15
+    colors = ['red', 'green', 'blue']
+    ax.plot(data, fit_line, linestyle='--', color=colors[i], label="Slope: {:.2f}".format(coeffs[0]))
+ax.legend()
 
 plt.tight_layout()
 plt.show()
