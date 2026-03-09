@@ -14,10 +14,10 @@ import infomeasure as im # to compute information measures
 from dirs import dir, save_dir
 
 # Parameters definition
-sim_list = ['03', '04']
+sim_list = ['01', '02']
 n_sim = len(sim_list)
-scaleth_list= [50, 50]
-cutoff_radius = [-5, -3]
+scaleth_list= [75, 50]
+cutoff_radius = [-6, -5]
 
 if "03" in sim_list:
     K = 4
@@ -100,6 +100,7 @@ for j in range(n_sim):
     ax_spectrum.set_ylabel('Energy E(k)')
     ax_spectrum.set_title(f'Energy Spectrum - Simulation {sim_n}')
     ax_spectrum.grid(True, which='both', alpha=0.3)
+    ax_spectrum.axvline(x = K, color='black', linestyle='--', label='Energy Injection Radius')
     fig_spectrum.savefig(out_dir + scale_dir + f'Energy-spectrum-{scaleth}.png', dpi=300)
     fig_spectrum.show()
 
