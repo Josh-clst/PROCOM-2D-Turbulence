@@ -70,6 +70,39 @@ for j in range(n_sim):
     if not os.path.exists(out_dir + scale_dir):
         os.makedirs(out_dir + scale_dir, exist_ok=True)
 
+    # Compute and plot energy spectrum
+    fft_ww = np.fft.fft2(WW)
+    fft_ww_shifted = np.fft.fftshift(fft_ww)
+    energy_spectrum = np.abs(fft_ww_shifted)**2
+    
+    # Compute radial wavenumber
+    ny, nx = WW.shape
+    kx = 2 * np.pi * np.fft.fftfreq(nx, ls)
+    ky = 2 * np.pi * np.fft.fftfreq(ny, ls)
+    kx_shifted = np.fft.fftshift(kx)
+    ky_shifted = np.fft.fftshift(ky)
+    Kx, Ky = np.meshgrid(kx_shifted, ky_shifted)
+    k_radial = np.sqrt(Kx**2 + Ky**2)
+    
+    # Bin the energy by wavenumber
+    k_bins = np.linspace(0, np.max(k_radial), 100)
+    E_k = np.zeros(len(k_bins)-1)
+    for i in range(len(k_bins)-1):
+        mask = (k_radial >= k_bins[i]) & (k_radial < k_bins[i+1])
+        E_k[i] = np.mean(energy_spectrum[mask]) if np.any(mask) else 0
+    
+    k_centers = (k_bins[:-1] + k_bins[1:]) / 2
+    
+    # Plot energy spectrum
+    fig_spectrum, ax_spectrum = plt.subplots(figsize=(10, 6))
+    ax_spectrum.loglog(k_centers[k_centers > 0], E_k[k_centers > 0])
+    ax_spectrum.set_xlabel('Wavenumber k')
+    ax_spectrum.set_ylabel('Energy E(k)')
+    ax_spectrum.set_title(f'Energy Spectrum - Simulation {sim_n}')
+    ax_spectrum.grid(True, which='both', alpha=0.3)
+    fig_spectrum.savefig(out_dir + scale_dir + f'Energy-spectrum-{scaleth}.png', dpi=300)
+    fig_spectrum.show()
+
     # Definition of scales
     scales=np.arange(-scaleth,scaleth+1,1)
 
@@ -167,7 +200,7 @@ for j in range(n_sim):
         ax.grid(True)
 
 ax = axes[2]
-vertical_line_position =  np.log(1/K * 2/box_size)
+vertical_line_position =  np.log(1/K * 1/(3*box_size))
 ax.axvline(x=vertical_line_position, color='black', linestyle='--', label='Energy Injection Radius')
 for i, r_fit in enumerate(data_chunks):
     
