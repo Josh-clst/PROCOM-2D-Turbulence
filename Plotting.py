@@ -92,20 +92,15 @@ for j in range(n_sim):
         E_k[i] = np.mean(energy_spectrum[mask]) if np.any(mask) else 0
     
     k_centers = (k_bins[:-1] + k_bins[1:]) / 2
-    
-    k_centers = k_centers[k_centers > 0]
-
-    E_k = E_k[k_centers > 0]
-    E_k = np.log(E_k)
 
     # Plot energy spectrum
     fig_spectrum, ax_spectrum = plt.subplots(figsize=(10, 6))
-    ax_spectrum.plot(k_centers, E_k)
+    ax_spectrum.plot(np.log(k_centers), np.log(E_k))
     ax_spectrum.set_xlabel('Wavenumber k')
     ax_spectrum.set_ylabel('Energy E(k)')
     ax_spectrum.set_title(f'Energy Spectrum - Simulation {sim_n}')
     ax_spectrum.grid(True, which='both', alpha=0.3)
-    ax_spectrum.axvline(x = K, color='black', linestyle='--', label='Energy Injection Radius')
+    ax_spectrum.axvline(x = np.log(K), color='black', linestyle='--', label='Energy Injection Radius')
     fig_spectrum.savefig(out_dir + scale_dir + f'Energy-spectrum-{scaleth}.png', dpi=300)
 
     # Definition of scales
