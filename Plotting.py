@@ -201,7 +201,7 @@ for j in range(n_sim):
         ax.grid(True)
 
 ax = axes[2]
-vertical_line_position =  np.log(1/K * 1/(3*box_size))
+vertical_line_position =  np.log(1/K * 2/box_size)
 ax.axvline(x=vertical_line_position, color='black', linestyle='--', label='Energy Injection Radius')
 for i, r_fit in enumerate(data_chunks):
     
