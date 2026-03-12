@@ -14,10 +14,10 @@ import infomeasure as im # to compute information measures
 from dirs import dir, save_dir
 
 # Parameters definition
-sim_list = ['03', '04']
+sim_list = ['01', '02']
 n_sim = len(sim_list)
-scaleth_list= [50, 50]
-cutoff_radius = [-5, -3]
+scaleth_list= [75, 50]
+cutoff_radius = [-6.2, -5.3, -4.6]
 
 if "03" in sim_list:
     K = 4
@@ -202,6 +202,7 @@ for j in range(n_sim):
 ax = axes[2]
 vertical_line_position =  np.log(1/K * 2/box_size)
 ax.axvline(x=vertical_line_position, color='black', linestyle='--', label='Energy Injection Radius')
+colors = ["C"+str(i) for i in range(len(data_chunks))]
 for i, r_fit in enumerate(data_chunks):
     
     data = np.concatenate(r_fit)
@@ -212,7 +213,6 @@ for i, r_fit in enumerate(data_chunks):
     coeffs = np.mean(coeffs, axis = 0)
 
     fit_line = np.polyval(coeffs, data) + 0.15
-    colors = ['red', 'green', 'blue']
     ax.plot(data, fit_line, linestyle='--', color=colors[i], label="Slope: {:.2f}".format(coeffs[0]))
 ax.legend()
 
