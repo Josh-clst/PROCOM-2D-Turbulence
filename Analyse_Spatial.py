@@ -27,7 +27,7 @@ import infomeasure as im # to compute information measures
 #%%
 from dirs import dir, save_dir
 
-sim_n = '03'
+sim_n = '04'
 path= dir + 'sim_' + sim_n + '/' + 'vars.nc'
 save_dir = save_dir + 'sim_' + sim_n + '/'
 # Ensure output directory exists to avoid "No such file or directory" when saving
@@ -50,6 +50,7 @@ WW=ww[timei,:,:]
 print("WW shape :", WW.shape)
 
 plt.imshow(WW, label='Vorticity field snapshot', cmap='jet')
+plt.axis('off')
 
 # Standard deviation estimation
 sigma=np.std(WW)
@@ -61,7 +62,7 @@ N=len(WW)
 
 # Parameters definition
 Nanalyse=2**10 # number of increments to analyse (512 / 1024 is a good compromise between statistical convergence and computation time)
-scaleth= 20 # maximum scale to analyse
+scaleth= 50 # maximum scale to analyse
 Nreal = 2 # number of realizations to average the information measures over
 
 scale_dir = f'scales_1-{scaleth}/'
@@ -194,13 +195,14 @@ for k in range(n_angles):
     dist_gauss_angle.append(dist_gauss[rr,cc])
 
 # Preparing the data for plotting
-
+print(flatness_angle)
 radius_angle = [np.log(elt) for elt in radius_angle]
 flatness_angle = [np.log((elt+3)/3) for elt in flatness_angle]
 
 # %%
 # Visualization of the information measures
 save_graphs = True
+plt.axis('on')
 
 fig1 = plt.figure()
 plt.imshow(S2, extent=[-scaleth*ls, scaleth*ls, -scaleth*ls, scaleth*ls])
@@ -318,7 +320,6 @@ plt.tight_layout()
 plt.show()
 
 if save_graphs:
-    # Saving the information measures
     fig1.savefig(save_dir + scale_dir + f'Vorticity_S2_Image_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
     fig2.savefig(save_dir + scale_dir + f'Vorticity_Results_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
     fig3.savefig(save_dir + scale_dir + f'Vorticity_Histograms_Nanalyse1024_scales1-{scaleth}.png', dpi=300)
